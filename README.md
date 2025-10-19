@@ -1,17 +1,20 @@
-# Task API - Shell Command Runner
+# Task API - Kubernetes Shell Command Runner
 
-A Spring Boot REST API for managing and executing shell commands with MongoDB persistence.
+A Spring Boot REST API deployed on Kubernetes for managing and executing shell commands in Kubernetes pods with MongoDB persistence.
 
 ## 📋 Overview
 
-This application provides a REST API for creating, managing, and executing shell commands in a secure environment. Each task represents a shell command that can be run, with execution history tracking.
+This application provides a REST API for creating, managing, and executing shell commands in Kubernetes pods. Each task represents a shell command that runs in a separate Kubernetes pod using busybox containers, with execution history tracking stored in MongoDB.
 
 ## 🏗️ Architecture
 
 - **Framework**: Spring Boot 3.5.6
-- **Database**: MongoDB
+- **Database**: MongoDB (deployed via Helm)
 - **Language**: Java 21
 - **Build Tool**: Maven
+- **Container Platform**: Docker + Kubernetes (Minikube)
+- **Command Execution**: Kubernetes Pods (busybox containers)
+- **Client Library**: Fabric8 Kubernetes Client
 
 ## 📊 Data Models
 
@@ -124,7 +127,7 @@ curl -X GET "http://localhost:8080/tasks/find?name=Hello"
 
 ### 5. PUT /tasks/execute
 
-**Description**: Execute a task's shell command
+**Description**: Execute a task's shell command in a Kubernetes pod
 
 **Parameters**:
 
@@ -137,6 +140,14 @@ curl -X PUT "http://localhost:8080/tasks/execute?id=123"
 ```
 
 **Response**: Updated task object with new execution result
+
+**How it works**:
+
+- Creates a new Kubernetes pod with busybox image
+- Runs the command inside the pod
+- Captures output and logs
+- Automatically deletes the pod after execution
+- Stores execution result in MongoDB
 
 ## 🔒 Security Features
 
@@ -156,79 +167,117 @@ The API includes comprehensive security validation to prevent malicious commands
 }
 ```
 
-## 📱 API Testing with Postman
+## 📱 Kubernetes Deployment Screenshots
 
-### Screenshots
+The following screenshots demonstrate the Kubernetes deployment and functionality:
 
-The following screenshots demonstrate the API functionality:
+| Description                      | Screenshot                                                      |
+| -------------------------------- | --------------------------------------------------------------- |
+| All Kubernetes pods running      | ![All Pods](docs/screenshots/01-kubectl-get-pods.png)           |
+| Application health check         | ![Health Check](docs/screenshots/02-health-endpoint.png)        |
+| Task creation via API            | ![Create Task](docs/screenshots/03-create-task.png)             |
+| Task execution in Kubernetes pod | ![Execute Task](docs/screenshots/04-execute-task.png)           |
+| Persistent volume for MongoDB    | ![Persistent Volume](docs/screenshots/05-persistent-volume.png) |
+| Port forwarding setup            | ![Port Forwarding](docs/screenshots/port-forwarding.png)        |
 
-| Endpoint                   | Description         | Screenshot                                                          |
-| -------------------------- | ------------------- | ------------------------------------------------------------------- |
-| GET /tasks                 | Get all tasks       | ![Get All Tasks](docs/screenshots/01-get-all-tasks.png)             |
-| GET /tasks?id=t2           | Get task by ID      | ![Get Task by ID](docs/screenshots/02-get-task-by-id.png)           |
-| GET /tasks/id=t4           | Task not found      | ![Task Not Found](docs/screenshots/06-get-tasks-by-id-error.png)    |
-| PUT /tasks                 | Create task         | ![Create Task](docs/screenshots/03-create-task.png)                 |
-| PUT /tasks/execute?id=t1   | Execute task        | ![Execute Task](docs/screenshots/04-execute-task.png)               |
-| GET /tasks/find?name=print | Find tasks by name  | ![Find Tasks by Name](docs/screenshots/05-find-tasks-by-name.png)   |
-| GET /tasks/find?name=hi    | Task not found      | ![Task Not Found](docs/screenshots/09-find-tasks-by-name-error.png) |
-| DELETE /tasks?id=t3        | Delete task         | ![Delete Task](docs/screenshots/07-delete-task.png)                 |
-| PUT /tasks (malicious)     | Security validation | ![Security Validation](docs/screenshots/08-security-validation.png) |
-
-## 🛠️ Setup Instructions
+## 🛠️ Kubernetes Deployment Instructions
 
 ### Prerequisites
 
 - **Java 21** or higher
 - **Maven 3.6+**
-- **MongoDB 4.4+** running on localhost:27017
+- **Docker** installed
+- **Minikube** installed
+- **kubectl** installed
+- **Helm** installed
 
-### How to Compile the Application
+### Kubernetes Deployment Steps
 
-1. **Navigate to project directory**:
+#### 1. Start Minikube Cluster
 
-   ```bash
-   cd task-api
-   ```
+```bash
+minikube start --driver=qemu2
+minikube status
+```
 
-2. **Compile the application**:
+#### 2. Build Docker Image
 
-   ```bash
-   mvn clean compile
-   ```
+```bash
+# Navigate to project directory
+cd task-api
 
-3. **Run tests (optional)**:
+# Build Docker image in minikube context
+eval $(minikube docker-env)
+docker build -t shell-runner:latest .
+```
 
-   ```bash
-   mvn test
-   ```
+#### 3. Deploy MongoDB via Helm
 
-4. **Package the application**:
-   ```bash
-   mvn clean package
-   ```
+```bash
+# Add Bitnami repository
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo update
 
-### How to Run the Application
+# Install MongoDB with persistence
+helm install mongodb bitnami/mongodb \
+  --set auth.enabled=false \
+  --set persistence.enabled=true \
+  --set persistence.size=2Gi
+```
 
-#### Using Maven (Development)
+#### 4. Deploy Application
 
-1. **Start MongoDB**:
+```bash
+# Apply Kubernetes manifests
+kubectl apply -f k8s-configmap.yaml
+kubectl apply -f k8s-rbac.yaml
+kubectl apply -f k8s-deployment.yaml
+kubectl apply -f k8s-service.yaml
+```
 
-   ```bash
-   mongod
-   ```
+#### 5. Verify Deployment
 
-2. **Run the application**:
-   ```bash
-   mvn spring-boot:run
-   ```
+```bash
+# Check pods are running
+kubectl get pods -A
+
+# Check services
+kubectl get svc -n shell-runner
+
+# Check persistent volumes
+kubectl get pvc
+```
+
+#### 6. Access Application
+
+```bash
+# Port forward to access from host
+kubectl port-forward -n shell-runner svc/shell-runner-service 8080:8080 &
+
+# Test health endpoint
+curl http://localhost:8080/actuator/health
+```
+
+### Local Development (Optional)
+
+For local development without Kubernetes:
+
+```bash
+# Start MongoDB locally
+mongod
+
+# Run with local profile
+mvn spring-boot:run -Dspring-boot.run.profiles=local
+```
 
 ## 📖 How to Use the API
 
 ### Quick Start Guide
 
-1. **Ensure the application is running** on `http://localhost:8080`
-2. **Use any HTTP client** (curl, Postman, browser, etc.)
-3. **Send requests** to the appropriate endpoints
+1. **Ensure Kubernetes deployment is running** (follow deployment steps above)
+2. **Start port forwarding**: `kubectl port-forward -n shell-runner svc/shell-runner-service 8080:8080 &`
+3. **Use any HTTP client** (curl, Postman, browser, etc.)
+4. **Send requests** to the appropriate endpoints
 
 ### API Usage Examples
 
@@ -286,6 +335,8 @@ curl -X PUT "http://localhost:8080/tasks/execute?id=hello-world"
   ]
 }
 ```
+
+**Note**: The command executes in a Kubernetes pod using busybox container, not locally.
 
 #### 4. Search Tasks by Name
 
@@ -374,32 +425,62 @@ The API provides comprehensive error handling:
 ## 📝 Project Structure
 
 ```
-src/main/java/com/venkatesh/shellrunner/
-├── api/
-│   └── TaskController.java                 endpoints
-├── core/
-│   ├── Task.java
-│   ├── TaskExecution.java             TaskExecution entity
-│   └── TaskProcessor.java                      logic
-├── data/
-│   └── TaskRepository.java                repository
-├── execution/
-│   └── CommandExecutor.java                 command execution
-├── security/
-│   └── SecurityChecker.java                 validation
-├── errors/
-│   ├── ErrorHandler.java                   exception handling
-│   └── ResourceNotFoundException.java
-└── ShellRunnerApplication.java
- application class
+task-api/
+├── Dockerfile                              # Container build instructions
+├── .dockerignore                           # Docker ignore file
+├── pom.xml                                 # Maven configuration
+├── README.md                               # Documentation
+├── mvnw                                    # Maven wrapper (Unix)
+├── mvnw.cmd                                # Maven wrapper (Windows)
+├── k8s-configmap.yaml                      # Application configuration
+├── k8s-rbac.yaml                           # ServiceAccount and permissions
+├── k8s-deployment.yaml                     # Application deployment
+├── k8s-service.yaml                        # Service exposure
+├── docs/screenshots/                       # Screenshots (6 files)
+│   ├── 01-kubectl-get-pods.png
+│   ├── 02-health-endpoint.png
+│   ├── 03-create-task.png
+│   ├── 04-execute-task.png
+│   ├── 05-persistent-volume.png
+│   └── port-forwarding.png
+└── src/main/
+    ├── java/com/venkatesh/shellrunner/
+    │   ├── api/
+    │   │   └── TaskController.java          # REST endpoints
+    │   ├── core/
+    │   │   ├── Task.java                   # Task entity
+    │   │   ├── TaskExecution.java          # TaskExecution entity
+    │   │   └── TaskProcessor.java          # Business logic
+    │   ├── data/
+    │   │   └── TaskRepository.java         # MongoDB repository
+    │   ├── execution/
+    │   │   ├── CommandExecutor.java        # Local execution (local profile)
+    │   │   ├── KubernetesExecutor.java     # Kubernetes execution (k8s profile)
+    │   │   └── TaskExecutor.java          # Execution interface
+    │   ├── config/
+    │   │   └── ExecutorConfig.java         # Profile-based configuration
+    │   ├── security/
+    │   │   └── SecurityChecker.java        # Command validation
+    │   ├── errors/
+    │   │   ├── ErrorHandler.java          # Exception handling
+    │   │   └── ResourceNotFoundException.java
+    │   └── ShellRunnerApplication.java     # Main application class
+    └── resources/
+        ├── application.properties          # Main configuration
+        ├── application-local.properties    # Local profile config
+        └── application-k8s.properties     # Kubernetes profile config
 ```
 
 ## 🎯 Key Features
 
 - ✅ **Complete CRUD Operations** for tasks
-- ✅ **Secure Command Execution** with validation
+- ✅ **Kubernetes Pod Execution** - Commands run in separate pods using busybox
+- ✅ **Profile-based Execution** - Local vs Kubernetes execution modes
 - ✅ **Execution History Tracking** with timestamps
-- ✅ **MongoDB Persistence** for data storage
+- ✅ **MongoDB Persistence** with persistent volumes
+- ✅ **RBAC Security** - ServiceAccount with pod management permissions
+- ✅ **Docker Containerization** - Multi-stage build with security best practices
 - ✅ **Comprehensive Error Handling** with proper HTTP status codes
 - ✅ **RESTful API Design** following best practices
 - ✅ **Input Validation** and security checks
+- ✅ **Automatic Pod Cleanup** - Execution pods are deleted after completion

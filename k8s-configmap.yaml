@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shell-runner-config
+  namespace: shell-runner
+data:
+  SPRING_DATA_MONGODB_URI: "mongodb://mongodb.default.svc.cluster.local:27017/taskdb"
+  SPRING_PROFILES_ACTIVE: "k8s"
+  EXECUTOR_TYPE: "k8s"
+  EXECUTOR_TIMEOUT: "60"
+  EXECUTOR_IMAGE: "busybox:latest"

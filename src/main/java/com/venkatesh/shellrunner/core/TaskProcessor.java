@@ -1,7 +1,7 @@
 package com.venkatesh.shellrunner.core;
 
 import com.venkatesh.shellrunner.data.TaskRepository;
-import com.venkatesh.shellrunner.execution.CommandExecutor;
+import com.venkatesh.shellrunner.execution.TaskExecutor;
 import com.venkatesh.shellrunner.security.SecurityChecker;
 import org.springframework.stereotype.Service;
 import com.venkatesh.shellrunner.errors.ResourceNotFoundException;
@@ -14,9 +14,9 @@ public class TaskProcessor {
 
     private final TaskRepository repository;
     private final SecurityChecker securityChecker;
-    private final CommandExecutor executor;
+    private final TaskExecutor executor;
 
-    public TaskProcessor(TaskRepository repository, SecurityChecker securityChecker, CommandExecutor executor) {
+    public TaskProcessor(TaskRepository repository, SecurityChecker securityChecker, TaskExecutor executor) {
         this.repository = repository;
         this.securityChecker = securityChecker;
         this.executor = executor;
@@ -58,7 +58,7 @@ public class TaskProcessor {
         securityChecker.validateCommand(task.getCommand());
 
         Date start = new Date();
-        CommandExecutor.ExecutionResult result = executor.runCommand(task.getCommand(),
+        TaskExecutor.ExecutionResult result = executor.runCommand(task.getCommand(),
                 java.time.Duration.ofSeconds(5));
         Date end = new Date();
 

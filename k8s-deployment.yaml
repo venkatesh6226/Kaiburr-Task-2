@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shell-runner
+  namespace: shell-runner
+  labels:
+    app: shell-runner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shell-runner
+  template:
+    metadata:
+      labels:
+        app: shell-runner
+    spec:
+      serviceAccountName: shell-runner-sa
+      containers:
+        - name: shell-runner
+          image: shell-runner:latest
+          imagePullPolicy: Never # Use local image in minikube
+          ports:
+            - containerPort: 8080
+              name: http
+          envFrom:
+            - configMapRef:
+                name: shell-runner-config
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            runAsGroup: 1001
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL

@@ -1,5 +1,6 @@
 package com.venkatesh.shellrunner.execution;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;
@@ -8,19 +9,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 @Component
-public class CommandExecutor {
-
-    public static class ExecutionResult {
-        public final int exitCode;
-        public final String stdout;
-        public final String stderr;
-
-        public ExecutionResult(int exitCode, String stdout, String stderr) {
-            this.exitCode = exitCode;
-            this.stdout = stdout;
-            this.stderr = stderr;
-        }
-    }
+@Profile("local")
+public class CommandExecutor implements TaskExecutor {
 
     public ExecutionResult runCommand(String command, Duration timeout) throws Exception {
         ProcessBuilder pb = new ProcessBuilder("bash", "-lc", command);
