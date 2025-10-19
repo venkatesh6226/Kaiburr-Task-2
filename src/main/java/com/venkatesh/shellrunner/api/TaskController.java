@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
+@CrossOrigin(origins = { "http://localhost:3000", "http://127.0.0.1:3000" })
 public class TaskController {
 
     private final TaskProcessor processor;

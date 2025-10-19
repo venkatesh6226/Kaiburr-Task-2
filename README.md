@@ -470,17 +470,3 @@ task-api/
         ├── application-local.properties    # Local profile config
         └── application-k8s.properties     # Kubernetes profile config
 ```
-
-## 🎯 Key Features
-
-- ✅ **Complete CRUD Operations** for tasks
-- ✅ **Kubernetes Pod Execution** - Commands run in separate pods using busybox
-- ✅ **Profile-based Execution** - Local vs Kubernetes execution modes
-- ✅ **Execution History Tracking** with timestamps
-- ✅ **MongoDB Persistence** with persistent volumes
-- ✅ **RBAC Security** - ServiceAccount with pod management permissions
-- ✅ **Docker Containerization** - Multi-stage build with security best practices
-- ✅ **Comprehensive Error Handling** with proper HTTP status codes
-- ✅ **RESTful API Design** following best practices
-- ✅ **Input Validation** and security checks
-- ✅ **Automatic Pod Cleanup** - Execution pods are deleted after completion
